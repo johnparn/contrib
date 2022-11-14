@@ -8,10 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aquasecurity/esquery"
-	"github.com/open-policy-agent/opa/sdk"
+	"reflect"
 	"strings"
 	"time"
+
+	"github.com/aquasecurity/esquery"
+	"github.com/open-policy-agent/opa/sdk"
 
 	"github.com/open-policy-agent/contrib/data_filter_elasticsearch/internal/es"
 	"github.com/open-policy-agent/opa/ast"
@@ -76,6 +78,7 @@ func processQuery(pq *rego.PartialQueries) (Result, error) {
 			var value interface{}
 			var processedTerm []string
 			var err error
+
 			for _, term := range expr.Operands() {
 				if ast.IsConstant(term.Value) {
 					value, err = ast.JSON(term.Value)
@@ -87,18 +90,46 @@ func processQuery(pq *rego.PartialQueries) (Result, error) {
 				}
 			}
 
+			fmt.Println("processQuery value", value)
+			fmt.Println("processQuery terms", processedTerm)
+
 			var esQuery esquery.Mappable
 
 			if isEqualityOperator(expr.Operator().String()) {
-				// generate ES Term query
-				esQuery = esquery.Term(processedTerm[1], value)
+				rt := reflect.TypeOf(value)
+				fmt.Println("KIND", rt.Kind())
+				switch rt.Kind() {
+				case reflect.Slice:
+					groups := value.([]interface{}) // []string{"group2"}
 
-				// check if nested query
-				terms := strings.Split(processedTerm[1], ".")
-				if len(terms) > 1 {
-					path := strings.Join(terms[:len(terms)-1], ".")
-					esQuery = es.GenerateNestedQuery(path, esQuery)
+					groups_slice := make([]interface{}, len(groups))
+					for i, v := range groups {
+						groups_slice[i] = v
+					}
+					fmt.Println("processQuery groups", groups_slice)
+					esQuery = es.GenerateTermsQuery(processedTerm[1], groups_slice)
+				default:
+					// generate ES Term query
+					esQuery = esquery.Term(processedTerm[1], value)
+
+					// check if nested query
+					terms := strings.Split(processedTerm[1], ".")
+					if len(terms) > 1 {
+						path := strings.Join(terms[:len(terms)-1], ".")
+						esQuery = es.GenerateNestedQuery(path, esQuery)
+					}
 				}
+
+				// if rt.Kind() == reflect.Slice {
+				// 	groups := value.([]interface{}) // []string{"group2"}
+
+				// 	groups_slice := make([]interface{}, len(groups))
+				// 	for i, v := range groups {
+				// 		groups_slice[i] = v
+				// 	}
+				// 	fmt.Println("processQuery groups", groups_slice)
+				// 	esQuery = es.GenerateTermsQuery(processedTerm[1], groups_slice)
+				// }
 
 			} else if isRangeOperator(expr.Operator().String()) {
 				// generate ES Range query

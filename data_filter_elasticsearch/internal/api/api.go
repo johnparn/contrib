@@ -9,18 +9,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aquasecurity/esquery"
-	elastic "github.com/elastic/go-elasticsearch/v8"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/sdk"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/aquasecurity/esquery"
+	elastic "github.com/elastic/go-elasticsearch/v8"
 	"github.com/gorilla/mux"
 	"github.com/open-policy-agent/contrib/data_filter_elasticsearch/internal/es"
 	"github.com/open-policy-agent/contrib/data_filter_elasticsearch/internal/opa"
+	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/sdk"
 )
 
 const (
@@ -81,6 +81,7 @@ func (api *ServerAPI) Run(ctx context.Context) error {
 }
 
 func (api *ServerAPI) handlGetPosts(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("handleGetPosts", r)
 	result, err := api.queryOPA(w, r)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, apiCodeInternalError, err)
@@ -92,7 +93,9 @@ func (api *ServerAPI) handlGetPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("handleGetPosts", result.Query)
 	combinedQuery := combineQuery(es.GenerateMatchAllQuery(), result.Query)
+	fmt.Println("handleGetPosts combinedQuery", combinedQuery)
 	queryEs(r.Context(), api.es, api.index, combinedQuery, w)
 
 }
@@ -114,15 +117,17 @@ func (api *ServerAPI) handleGetPost(w http.ResponseWriter, r *http.Request) {
 	queryEs(r.Context(), api.es, api.index, combinedQuery, w)
 }
 
+// Compile OPA query
 func (api *ServerAPI) queryOPA(w http.ResponseWriter, r *http.Request) (opa.Result, error) {
-
-	user := r.Header.Get("Authorization")
+	fmt.Println("queryOPA")
+	token := r.Header.Get("Authorization")
 	path := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 
+	// Inject data to OPA
 	input := map[string]interface{}{
 		"method": r.Method,
 		"path":   path,
-		"user":   user,
+		"token":  token,
 	}
 
 	return opa.Compile(api.opa, r.Context(), input)
@@ -132,12 +137,15 @@ func combineQuery(queryFromHandler esquery.Mappable, queryFromOpa esquery.Mappab
 	var combinedQuery = queryFromHandler
 	if queryFromOpa != nil {
 		queries := []esquery.Mappable{queryFromOpa, queryFromHandler}
+		fmt.Println("queryFromOpa", queryFromOpa)
+		fmt.Println("queryFromHandler", queryFromHandler)
 		combinedQuery = es.GenerateBoolFilterQuery(queries)
 	}
 	return combinedQuery
 }
 
 func queryEs(ctx context.Context, client *elastic.Client, index string, query esquery.Mappable, w http.ResponseWriter) {
+	fmt.Println("QueryES", query)
 	searchResult, err := es.ExecuteEsSearch(ctx, client, index, query)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, apiCodeInternalError, err)

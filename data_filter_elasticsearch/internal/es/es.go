@@ -9,13 +9,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aquasecurity/esquery"
-	elastic "github.com/elastic/go-elasticsearch/v8"
-	"github.com/elastic/go-elasticsearch/v8/esutil"
 	"io"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/aquasecurity/esquery"
+	elastic "github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/esutil"
 )
 
 // Post is a structure used for serializing/deserializing data in Elasticsearch.
@@ -32,6 +33,7 @@ type Post struct {
 	Likes      []map[string]string `json:"likes"`
 	Followers  []People            `json:"followers"`
 	Stats      []Stat              `json:"stats"`
+	Access     []string            `json:"access"`
 }
 
 // People describes a person.
@@ -176,6 +178,13 @@ const mapping = `
 	}
 }`
 
+//  "access": {
+// 	"type": "nested",
+// 	 "properties": {
+// 			"type": "keyword"
+// 	 }
+//  },
+
 // NewPost returns a post.
 func NewPost(id, author, message, department, email string, clearance int, action, resource string, conditions []map[string]string, likes []map[string]string, followers []People, stats []Stat) *Post {
 	post := &Post{}
@@ -191,7 +200,6 @@ func NewPost(id, author, message, department, email string, clearance int, actio
 	post.Likes = likes
 	post.Followers = followers
 	post.Stats = stats
-
 	return post
 }
 
@@ -207,7 +215,12 @@ func GetIndexMapping() string {
 
 // Elasticsearch queries
 
-// GenerateTermQuery returns an ES Term Query.
+// GenerateTermsQuery returns an ES Terms Query.
+func GenerateTermsQuery(fieldName string, fieldValues []interface{}) *esquery.TermsQuery {
+	return esquery.Terms(fieldName, fieldValues...).Boost(1.3)
+}
+
+// GenerateTermsQuery returns an ES Term Query.
 func GenerateTermQuery(fieldName string, fieldValue interface{}) *esquery.TermQuery {
 	return esquery.Term(fieldName, fieldValue)
 

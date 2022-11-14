@@ -7,12 +7,10 @@ package main
 import (
 	"context"
 	"fmt"
+
 	elastic "github.com/elastic/go-elasticsearch/v8"
 	"github.com/open-policy-agent/contrib/data_filter_elasticsearch/internal/api"
 	"github.com/open-policy-agent/contrib/data_filter_elasticsearch/internal/es"
-	"io"
-	"io/ioutil"
-	"strings"
 )
 
 func main() {
@@ -27,29 +25,29 @@ func main() {
 	indexName := "posts"
 
 	// Check if a specified index exists.
-	exists, err := client.Indices.Exists([]string{indexName},
-		client.Indices.Exists.WithContext(ctx))
-	if err != nil {
-		panic(err)
-	}
+	// exists, err := client.Indices.Exists([]string{indexName},
+	// 	client.Indices.Exists.WithContext(ctx))
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	if exists.StatusCode != 200 {
-		// Create a new index.
-		createIndex, err := client.Indices.Create(indexName,
-			client.Indices.Create.WithBody(strings.NewReader(es.GetIndexMapping())),
-			client.Indices.Create.WithContext(ctx))
-		if err != nil {
-			panic(err)
-		}
-		if createIndex.StatusCode != 200 {
-			panic("Index creation not acknowledged")
-		}
-		io.Copy(ioutil.Discard, createIndex.Body)
-		createIndex.Body.Close()
-	}
+	// if exists.StatusCode != 200 {
+	// 	// Create a new index.
+	// 	createIndex, err := client.Indices.Create(indexName,
+	// 		client.Indices.Create.WithBody(strings.NewReader(es.GetIndexMapping())),
+	// 		client.Indices.Create.WithContext(ctx))
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	if createIndex.StatusCode != 200 {
+	// 		panic("Index creation not acknowledged")
+	// 	}
+	// 	io.Copy(ioutil.Discard, createIndex.Body)
+	// 	createIndex.Body.Close()
+	// }
 
-	// Index posts.
-	createTestPosts(ctx, client, indexName)
+	// // Index posts.
+	// createTestPosts(ctx, client, indexName)
 
 	// Start server.
 	if err := api.New(client, indexName).Run(ctx); err != nil {
