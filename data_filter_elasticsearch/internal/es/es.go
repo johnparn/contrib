@@ -186,7 +186,7 @@ const mapping = `
 //  },
 
 // NewPost returns a post.
-func NewPost(id, author, message, department, email string, clearance int, action, resource string, conditions []map[string]string, likes []map[string]string, followers []People, stats []Stat) *Post {
+func NewPost(id, author, message, department, email string, clearance int, action, resource string, conditions []map[string]string, likes []map[string]string, followers []People, stats []Stat, access []string) *Post {
 	post := &Post{}
 	post.ID = id
 	post.Author = author
@@ -200,6 +200,7 @@ func NewPost(id, author, message, department, email string, clearance int, actio
 	post.Likes = likes
 	post.Followers = followers
 	post.Stats = stats
+	post.Access = access
 	return post
 }
 

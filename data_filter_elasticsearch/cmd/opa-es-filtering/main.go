@@ -7,6 +7,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"strings"
 
 	elastic "github.com/elastic/go-elasticsearch/v8"
 	"github.com/open-policy-agent/contrib/data_filter_elasticsearch/internal/api"
@@ -25,29 +28,29 @@ func main() {
 	indexName := "posts"
 
 	// Check if a specified index exists.
-	// exists, err := client.Indices.Exists([]string{indexName},
-	// 	client.Indices.Exists.WithContext(ctx))
-	// if err != nil {
-	// 	panic(err)
-	// }
+	exists, err := client.Indices.Exists([]string{indexName},
+		client.Indices.Exists.WithContext(ctx))
+	if err != nil {
+		panic(err)
+	}
 
-	// if exists.StatusCode != 200 {
-	// 	// Create a new index.
-	// 	createIndex, err := client.Indices.Create(indexName,
-	// 		client.Indices.Create.WithBody(strings.NewReader(es.GetIndexMapping())),
-	// 		client.Indices.Create.WithContext(ctx))
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	if createIndex.StatusCode != 200 {
-	// 		panic("Index creation not acknowledged")
-	// 	}
-	// 	io.Copy(ioutil.Discard, createIndex.Body)
-	// 	createIndex.Body.Close()
-	// }
+	if exists.StatusCode != 200 {
+		// Create a new index.
+		createIndex, err := client.Indices.Create(indexName,
+			client.Indices.Create.WithBody(strings.NewReader(es.GetIndexMapping())),
+			client.Indices.Create.WithContext(ctx))
+		if err != nil {
+			panic(err)
+		}
+		if createIndex.StatusCode != 200 {
+			panic("Index creation not acknowledged")
+		}
+		io.Copy(ioutil.Discard, createIndex.Body)
+		createIndex.Body.Close()
+	}
 
-	// // Index posts.
-	// createTestPosts(ctx, client, indexName)
+	// Index posts.
+	createTestPosts(ctx, client, indexName)
 
 	// Start server.
 	if err := api.New(client, indexName).Run(ctx); err != nil {
@@ -65,37 +68,37 @@ func createTestPosts(ctx context.Context, client *elastic.Client, indexName stri
 	testConditionMap := []map[string]string{}
 
 	// Post-1
-	post1 := es.NewPost("post1", "bob", "My first post", "dev", "bob@abc.com", 2, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post1 := es.NewPost("post1", "bob", "My first post", "dev", "bob@abc.com", 2, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group1", "group2", "group3"})
 
 	// Post-2
-	post2 := es.NewPost("post2", "bob", "My second post", "dev", "bob@abc.com", 2, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post2 := es.NewPost("post2", "bob", "My second post", "dev", "bob@abc.com", 2, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group4"})
 
 	// Post-3
-	post3 := es.NewPost("post3", "charlie", "Hello world", "it", "charlie@xyz.com", 1, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post3 := es.NewPost("post3", "charlie", "Hello world", "it", "charlie@xyz.com", 1, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group5"})
 
 	// Post-4
-	post4 := es.NewPost("post4", "alice", "Hii world", "hr", "alice@xyz.com", 3, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post4 := es.NewPost("post4", "alice", "Hii world", "hr", "alice@xyz.com", 3, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group1"})
 
 	// Post-5
-	post5 := es.NewPost("post5", "ben", "Hii from Ben", "ceo", "ben@opa.com", 10, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post5 := es.NewPost("post5", "ben", "Hii from Ben", "ceo", "ben@opa.com", 10, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group2"})
 
 	// Post-6
-	post6 := es.NewPost("post6", "ken", "Hii form Ken", "ceo", "ken@opa.com", 5, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post6 := es.NewPost("post6", "ken", "Hii form Ken", "ceo", "ken@opa.com", 5, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group3"})
 
 	// Post-7
-	post7 := es.NewPost("post7", "john", "OPA Good", "dev", "john@blah.com", 6, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post7 := es.NewPost("post7", "john", "OPA Good", "dev", "john@blah.com", 6, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group1", "group2"})
 
 	// Post-8
-	post8 := es.NewPost("post8", "ben", "This is OPA's time", "ceo", "ben@opa.com", 10, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post8 := es.NewPost("post8", "ben", "This is OPA's time", "ceo", "ben@opa.com", 10, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group1", "group3"})
 
 	// Post-9
-	post9 := es.NewPost("post9", "jane", "Hello from Jane", "it", "jane@opa.org", 7, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post9 := es.NewPost("post9", "jane", "Hello from Jane", "it", "jane@opa.org", 7, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group2", "group3"})
 
 	// Post-10: Nested Query 1 level
 	testLikes := make(map[string]string)
 	testLikes["name"] = "bob"
 	testLikesMap = append(testLikesMap, testLikes)
-	post10 := es.NewPost("post10", "ross", "Hello from Ross", "it", "ross@opal.eu", 9, "read", "", testConditionMap, testLikesMap, testFollowers, testStats)
+	post10 := es.NewPost("post10", "ross", "Hello from Ross", "it", "ross@opal.eu", 9, "read", "", testConditionMap, testLikesMap, testFollowers, testStats, []string{"group1"})
 
 	// Post-11: Nested Query 2 levels
 	testName := es.Name{
@@ -106,7 +109,7 @@ func createTestPosts(ctx context.Context, client *elastic.Client, indexName stri
 		Info: testName,
 	}
 	testFollowers = append(testFollowers, testFollower)
-	post11 := es.NewPost("post11", "rach", "Hello from Rach", "it", "rach@opal.eu", 9, "read", "", testConditionMap, []map[string]string{}, testFollowers, testStats)
+	post11 := es.NewPost("post11", "rach", "Hello from Rach", "it", "rach@opal.eu", 9, "read", "", testConditionMap, []map[string]string{}, testFollowers, testStats, []string{"group2"})
 
 	// Post-12: Nested Query 3 levels
 	authorBio := es.AuthorBioData{
@@ -124,7 +127,7 @@ func createTestPosts(ctx context.Context, client *elastic.Client, indexName stri
 	}
 	testStats = append(testStats, stat)
 
-	post12 := es.NewPost("post12", "chan", "Hello from Chan", "it", "chan@opal.eu", 9, "read", "cfgmgmt:nodes", testConditionMap, []map[string]string{}, []es.People{}, testStats)
+	post12 := es.NewPost("post12", "chan", "Hello from Chan", "it", "chan@opal.eu", 9, "read", "cfgmgmt:nodes", testConditionMap, []map[string]string{}, []es.People{}, testStats, []string{"group3"})
 
 	es.IndexPosts(ctx, client, indexName, []*es.Post{post1, post2, post3, post4, post5, post6, post7, post8, post9, post10, post11, post12})
 }
