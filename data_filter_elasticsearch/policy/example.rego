@@ -8,13 +8,10 @@ import future.keywords.in
 ### Matches on incoming request.
 
 default allow := false
-# default claims := false
 default jwt_groups_set := {}
 
 # Rule matching collection of posts.
 allow = true {
-    # print("INPUT", input)
-    # print("CLAIMS", input.token)
     input.method = "GET"
     input.path = ["posts"]
     allowed[x]
@@ -22,8 +19,6 @@ allow = true {
 
 # Rule matching individual post.
 allow = true {
-    # print("INPUT", input)
-    # print("CLAIMS", claims)
     input.method = "GET"
     input.path = ["posts", post_id]
     allowed[x]
@@ -39,69 +34,16 @@ claims := payload if {
  	[_, payload, _] := io.jwt.decode(t)
 }
 
-# Working with string value "bob" in Authorization header
-# allowed[x] {
-#     x := data.elastic.posts[_]
-#     v := input.token
-#     startswith(v, "Bearer ")
-# 	t := substring(v, count("Bearer "), -1)
-#     print("Bearer", t)
-#     x.author == t
-# }
-
 allowed[x] {
-    print("CLAIMS2", claims.groups)
     x := data.elastic.posts[_]
     data_access_set = {y | y := claims.groups[_]}
-    # print("INTERSECTION", data_access_set & jwt_groups_set)
+    print("INTERSECTION", data_access_set & jwt_groups_set)
     x.access == data_access_set & jwt_groups_set
 }
 
 jwt_groups_set := s {
     s := {y | y := claims.groups[_]}
 }
-
-
-
-# jwt_groups := jwt_groups_set if {
-#     # Verify, unpack token
-#     token := input.user;
-#     print("USER: ", token)
-#     bearer_token := substring(token, count("Bearer "), -1)
-#     io.jwt.verify_hs256(bearer_token, "B41BD5F462719C6D6118E673A2389")
-#     [_, payload, _] := io.jwt.decode(bearer_token)
-#     print("PAYLOAD: ", payload)
-#     jwt_groups_set := { j | j := payload.groups[_]}
-# }
-
-# jwt_payload := payload if {
-# 	# Verify the signature on the Bearer token. In this example the secret is
-# 	# hardcoded into the policy however it could also be loaded via data or
-# 	# an environment variable. Environment variables can be accessed using
-# 	# the `opa.runtime()` built-in function.
-# 	io.jwt.verify_hs256(bearer_token, "B41BD5F462719C6D6118E673A2389")
-
-# 	# This statement invokes the built-in function `io.jwt.decode` passing the
-# 	# parsed bearer_token as a parameter. The `io.jwt.decode` function returns an
-# 	# array:
-# 	#
-# 	#	[header, payload, signature]
-# 	#
-# 	# In Rego, you can pattern match values using the `=` and `:=` operators. This
-# 	# example pattern matches on the result to obtain the JWT payload.
-# 	[_, payload, _] := io.jwt.decode(bearer_token)
-# }
-
-# # Get bearer token
-# bearer_token := t if {
-# 	# Bearer tokens are contained inside of the HTTP Authorization header. This rule
-# 	# parses the header and extracts the Bearer token value. If no Bearer token is
-# 	# provided, the `bearer_token` value is undefined.
-# 	v := input.attributes.request.http.headers.authorization
-# 	startswith(v, "Bearer ")
-# 	t := substring(v, count("Bearer "), -1)
-# }
-
 
 ### Helper rules that implement data filtering & protection policy.
 
@@ -143,25 +85,6 @@ jwt_groups_set := s {
 #       "stats": []
 #     }
 #   ]
-# }
-# allowed[x] {
-#     x := data.elastic.posts[_]
-#     # x.author == input.user
-#     # es_groups_set := { y | y := x.access[_]}
-#     # count(es_groups_set & jwt_groups_set) >= 1
-#     es_groups_set := { y | y := x.access[_]}
-#     es_groups_set & jwt_groups_set) >= 1
-# }
-
-
-# allowed[x] {
-#     x := data.elastic.posts[_]
-#     es_access_set := { y | y := x.access[_]}
-#     print("ESGROUP", x.access)
-#     print("JWTGROUP", jwt_groups_set)
-#     count(es_access_set & jwt_groups_set) >= 1
-#     # y := intersection[_]
-#     # count(intersection) >= 1
 # }
 
 ### Simple built-in functions like !=, >, <.
@@ -425,15 +348,4 @@ jwt_groups_set := s {
 #     x := data.elastic.posts[_]
 #     y := x.stats[_]
 #     y.authorstat.authorbio.state = "CA"
-# }
-
-# allowed[x] {
-#     x := data.elastic.posts[_]
-#     y := x.access
-#     # groups_set := {v | v := y[_]}
-#     groups_set := {x | x := claims.groups[_]}
-#     # v := input.attributes.request.http.headers.authorization
-#     allowed_groups := {"group2", "group3"}
-#     has_access := groups_set & allowed_groups
-#     count(has_access) >= 1
 # }

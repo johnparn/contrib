@@ -81,7 +81,6 @@ func (api *ServerAPI) Run(ctx context.Context) error {
 }
 
 func (api *ServerAPI) handlGetPosts(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("handleGetPosts", r)
 	result, err := api.queryOPA(w, r)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, apiCodeInternalError, err)
@@ -93,9 +92,8 @@ func (api *ServerAPI) handlGetPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("handleGetPosts", result.Query)
 	combinedQuery := combineQuery(es.GenerateMatchAllQuery(), result.Query)
-	fmt.Println("handleGetPosts combinedQuery", combinedQuery)
+
 	queryEs(r.Context(), api.es, api.index, combinedQuery, w)
 
 }
@@ -119,10 +117,11 @@ func (api *ServerAPI) handleGetPost(w http.ResponseWriter, r *http.Request) {
 
 // Compile OPA query
 func (api *ServerAPI) queryOPA(w http.ResponseWriter, r *http.Request) (opa.Result, error) {
-	fmt.Println("queryOPA")
+
 	token := r.Header.Get("Authorization")
 	path := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 
+	fmt.Println(r)
 	// Inject data to OPA
 	input := map[string]interface{}{
 		"method": r.Method,
@@ -137,15 +136,12 @@ func combineQuery(queryFromHandler esquery.Mappable, queryFromOpa esquery.Mappab
 	var combinedQuery = queryFromHandler
 	if queryFromOpa != nil {
 		queries := []esquery.Mappable{queryFromOpa, queryFromHandler}
-		fmt.Println("queryFromOpa", queryFromOpa)
-		fmt.Println("queryFromHandler", queryFromHandler)
 		combinedQuery = es.GenerateBoolFilterQuery(queries)
 	}
 	return combinedQuery
 }
 
 func queryEs(ctx context.Context, client *elastic.Client, index string, query esquery.Mappable, w http.ResponseWriter) {
-	fmt.Println("QueryES", query)
 	searchResult, err := es.ExecuteEsSearch(ctx, client, index, query)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, apiCodeInternalError, err)
